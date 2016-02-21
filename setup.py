@@ -49,7 +49,7 @@ def main():
           platforms='Linux',
           url='https://github.com/yniknafs/taco',
           ext_modules=cythonize(extensions),
-          packages=['taco'],
+          packages=['taco', 'taco.lib', 'taco.lib.bx'],
           scripts=['taco/taco_run.py'])
 
 if __name__ == '__main__':
