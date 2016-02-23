@@ -7,7 +7,6 @@ TACO: Transcriptome meta-assembly from RNA-Seq
 '''
 import sys
 import logging
-from taco.lib.fizzbuzz import *
 from taco.lib.run import Run
 
 __author__ = "Matthew Iyer and Yashar Niknafs"
@@ -48,8 +47,6 @@ def main():
 
 if __name__ == '__main__':
     if PROFILE:
-        print fizzbuzz()
-        sys.exit(0)
         import cProfile
         sys.exit(cProfile.run('main()', filename=PROFILE_FILENAME))
     else:

@@ -10,6 +10,7 @@ import pysam
 from base import Sample, TacoError
 from gtf import GTF, GTFError, sort_gtf
 from stats import scoreatpercentile
+from taco.lib.aggregateC import *
 
 __author__ = "Matthew Iyer and Yashar Niknafs"
 __copyright__ = "Copyright 2016"
@@ -20,6 +21,8 @@ __maintainer__ = "Yashar Niknafs"
 __email__ = "mkiyer@umich.edu"
 __status__ = "Development"
 
+def aggregateC_gtf(gtf_file, sample_id, gtf_expr_attr, output_file, stats_file, is_ref=False):
+    aggregateC(gtf_file, str(sample_id), gtf_expr_attr, output_file, stats_file, str(is_ref))
 
 def _aggregate_gtf(gtf_file, sample_id, gtf_expr_attr, output_fh, stats_fh,
                    is_ref=False):
@@ -89,29 +92,30 @@ def aggregate(samples, ref_gtf_file, gtf_expr_attr, tmp_dir,
     '''
     Aggregate/merge individual sample GTF files
     '''
+
     # setup output files
     tmp_file = os.path.join(tmp_dir, 'transcripts.unsorted.gtf')
-    tmp_fileh = open(tmp_file, 'w')
-    stats_fileh = open(stats_file, 'w')
+    #tmp_fileh = open(tmp_file, 'w')
+    #stats_fileh = open(stats_file, 'w')
     # stats file has header
-    fields = ['sample_id', 'num_transfrags', 'expr_quantiles',
-              'length_quantiles', 'num_exon_quantiles']
-    print >>stats_fileh, '\t'.join(fields)
+    # fields = ['sample_id', 'num_transfrags', 'expr_quantiles', 'length_quantiles', 'num_exon_quantiles']
+    # print >>stats_fileh, '\t'.join(fields)
     # aggregate ref gtf
     if ref_gtf_file is not None:
         sample = Sample(ref_gtf_file, Sample.REF_ID)
         sample._id = Sample.REF_ID
         logging.debug('Reference: %s' % ref_gtf_file)
-        _aggregate_gtf(sample.gtf_file, sample._id, gtf_expr_attr,
-                       tmp_fileh, stats_fileh, is_ref=True)
+        aggregateC_gtf(sample.gtf_file, sample._id, gtf_expr_attr, tmp_file, stats_file, is_ref = True)
+        #_aggregate_gtf(sample.gtf_file, sample._id, gtf_expr_attr, tmp_fileh, stats_fileh, is_ref=True)
 
     # aggregate sample gtfs
     for sample in samples:
         logging.debug('Sample: %s %s' % (sample._id, sample.gtf_file))
-        _aggregate_gtf(sample.gtf_file, sample._id, gtf_expr_attr,
-                       tmp_fileh, stats_fileh)
-    tmp_fileh.close()
-    stats_fileh.close()
+        aggregateC_gtf(sample.gtf_file, sample._id, gtf_expr_attr, tmp_file, stats_file)
+        #_aggregate_gtf(sample.gtf_file, sample._id, gtf_expr_attr, tmp_fileh, stats_fileh)
+
+    #tmp_fileh.close()
+    #stats_fileh.close()
 
     # sort merged gtf
     logging.info("Sorting GTF")

@@ -34,7 +34,7 @@ extensions = [
               sources=['taco/lib/csuffixarray.pyx', 'taco/lib/sais.c']))[0],
     cythonize(Extension('taco.lib.cpathfinder',
               sources=['taco/lib/cpathfinder.pyx']))[0],
-    Extension('fizzbuzz', sources = ['taco/lib/c_aggregate.c'])
+    Extension('taco.lib.aggregateC', sources = ['taco/lib/aggregateC.c'])
 ]
 
 def main():
