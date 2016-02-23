@@ -17,26 +17,25 @@ __maintainer__ = "Yashar Niknafs"
 __email__ = "yniknafs@umich.edu"
 __status__ = "Development"
 
-
 extensions = [
-    Extension('taco.lib.cbedgraph',
+    cythonize(Extension('taco.lib.cbedgraph',
               sources=['taco/lib/cbedgraph.pyx'],
-              include_dirs=[numpy_inc]),
-    Extension('taco.lib.cchangepoint',
+              include_dirs=[numpy_inc]))[0],
+    cythonize(Extension('taco.lib.cchangepoint',
               sources=['taco/lib/cchangepoint.pyx'],
-              include_dirs=[numpy_inc]),
-    Extension('taco.lib.bx.cluster',
+              include_dirs=[numpy_inc]))[0],
+    cythonize(Extension('taco.lib.bx.cluster',
               sources=['taco/lib/bx/cluster.pyx',
                        'taco/lib/bx/intervalcluster.c'],
-              include_dirs=['taco/lib/bx']),
-    Extension('taco.lib.bx.intersection',
-              sources=['taco/lib/bx/intersection.pyx']),
-    Extension('taco.lib.csuffixarray',
-              sources=['taco/lib/csuffixarray.pyx', 'taco/lib/sais.c']),
-    Extension('taco.lib.cpathfinder',
-              sources=['taco/lib/cpathfinder.pyx'])
+              include_dirs=['taco/lib/bx']))[0],
+    cythonize(Extension('taco.lib.bx.intersection',
+              sources=['taco/lib/bx/intersection.pyx']))[0],
+    cythonize(Extension('taco.lib.csuffixarray',
+              sources=['taco/lib/csuffixarray.pyx', 'taco/lib/sais.c']))[0],
+    cythonize(Extension('taco.lib.cpathfinder',
+              sources=['taco/lib/cpathfinder.pyx']))[0],
+    Extension('fizzbuzz', sources = ['taco/lib/c_aggregate.c'])
 ]
-
 
 def main():
     setup(name='taco',
@@ -48,7 +47,7 @@ def main():
           license='GPL',
           platforms='Linux',
           url='https://github.com/yniknafs/taco',
-          ext_modules=cythonize(extensions),
+          ext_modules=extensions,
           packages=['taco', 'taco.lib', 'taco.lib.bx'],
           scripts=['taco/taco_run.py'])
 
