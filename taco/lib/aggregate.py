@@ -26,7 +26,13 @@ def aggregateC_gtf(gtf_file, sample_id, gtf_expr_attr, output_file, stats_file, 
         aggregateC(gtf_file, str(sample_id), gtf_expr_attr, output_file, stats_file, str(is_ref))
     except:
         logging.info("C Aggregate Failed -- Falling back to Python Aggregate")
-        _aggregate_gtf(gtf_file, sample_id, gtf_expr_attr, output_file, stats_file, is_ref)
+        output_fileh = open(output_file, 'a')
+        stats_fileh = open(stats_file, 'a')
+
+        _aggregate_gtf(gtf_file, sample_id, gtf_expr_attr, output_fileh, stats_fileh, is_ref)
+
+        output_fileh.close()
+        stats_fileh.close()
 
 def _aggregate_gtf(gtf_file, sample_id, gtf_expr_attr, output_fh, stats_fh,
                    is_ref=False):
@@ -99,11 +105,7 @@ def aggregate(samples, ref_gtf_file, gtf_expr_attr, tmp_dir,
 
     # setup output files
     tmp_file = os.path.join(tmp_dir, 'transcripts.unsorted.gtf')
-    tmp_fileh = open(tmp_file, 'w')
-    stats_fileh = open(stats_file, 'w')
-    # stats file has header
-    fields = ['sample_id', 'num_transfrags', 'expr_quantiles', 'length_quantiles', 'num_exon_quantiles']
-    print >>stats_fileh, '\t'.join(fields)
+    
     # aggregate ref gtf
     if ref_gtf_file is not None:
         sample = Sample(ref_gtf_file, Sample.REF_ID)
@@ -115,9 +117,6 @@ def aggregate(samples, ref_gtf_file, gtf_expr_attr, tmp_dir,
     for sample in samples:
         logging.debug('Sample: %s %s' % (sample._id, sample.gtf_file))
         aggregateC_gtf(sample.gtf_file, sample._id, gtf_expr_attr, tmp_file, stats_file)
-
-    tmp_fileh.close()
-    stats_fileh.close()
 
     # sort merged gtf
     logging.info("Sorting GTF")
