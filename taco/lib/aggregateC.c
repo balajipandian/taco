@@ -7,7 +7,6 @@
 //
 //  TODO:
 //  Need to Relay Safety Checks on sizes of strings, etc. 
-//  No Stats Code
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,9 +16,14 @@
 
 #include <Python.h>
 
+// Industry-standard FNV-32bit prime and offset
 #define FNV_32_PRIME ((uint32_t)0x01000193)
 #define FNV_32_OFFSET (2166136261U)
+
+// Hash table size is 2^22 * sizeof(Hash_node) ~100mb
 #define HASH_TABLE_SIZE (4194304)
+#define MAX_GTF_LINE_SIZE (1024)
+#define MAX_TRANSCRIPT_ID_SIZE (256)
 
 typedef struct Hash_node {
     uint32_t num_exons;
@@ -29,16 +33,14 @@ typedef struct Hash_node {
     struct Hash_node* next;
 } Hash_node;
 
+/* This is an industry-standard implementation of the FNV-32bit hash */
 uint32_t fnv_32_str(char *str)
 {
     unsigned char *s = (unsigned char *)str;
     uint32_t hval = FNV_32_OFFSET;
 
     while (*s) {
-        /* multiply by the 32 bit FNV magic prime mod 2^32 */
         hval += (hval<<1) + (hval<<4) + (hval<<7) + (hval<<8) + (hval<<24);
-
-        /* xor the bottom with the current octet */
         hval ^= (uint32_t)*s++;
     }
 
@@ -60,7 +62,7 @@ bool str_in_hashtable (Hash_node* hash_table_root,char* str) {
         if (strcmp(bucket.transcript_id, str) == 0) {
             return true;
         }
-        
+
         bucket = *bucket.next;
     }
     
@@ -142,7 +144,6 @@ void free_all_hashtable_nodes(Hash_node* hash_table_root) {
     free(hash_table_root);
 }
 
-
 static PyObject* py_aggregateC(PyObject* self, PyObject* args) {
     char* gtf_file;
     char* sample_id;
@@ -155,7 +156,7 @@ static PyObject* py_aggregateC(PyObject* self, PyObject* args) {
         return NULL;
     }
 
-    size_t bufflen = 1024;
+    size_t bufflen = MAX_GTF_LINE_SIZE;
     char* buffer = (char*)malloc(bufflen * sizeof(char));
     if (buffer == NULL) {
         return NULL;
@@ -174,6 +175,9 @@ static PyObject* py_aggregateC(PyObject* self, PyObject* args) {
     }
 
     Hash_node* t_dict = (Hash_node*)calloc(HASH_TABLE_SIZE, sizeof(Hash_node));
+    if (t_dict == NULL) {
+        return NULL;
+    }
 
     while (getline(&buffer, &bufflen, gtf_file_handler) != -1) {
         const char* seqname = strtok(buffer, "\t");
@@ -190,12 +194,12 @@ static PyObject* py_aggregateC(PyObject* self, PyObject* args) {
         char* transcript_id_start_index = strstr(attribute, "transcript_id \"");
         transcript_id_start_index += 15;
         char* end_of_transcript_id = strchr(transcript_id_start_index, '"');
-        char transcript_id[256];
+        char transcript_id[MAX_TRANSCRIPT_ID_SIZE];
         strncpy(transcript_id, transcript_id_start_index, end_of_transcript_id - transcript_id_start_index);
         transcript_id[end_of_transcript_id - transcript_id_start_index] = '\0';
         
         if (strcmp(feature, "transcript") == 0) {
-            char id_string[256];
+            char id_string[MAX_TRANSCRIPT_ID_SIZE];
 
             // Search for transcript_id in hashtable
             if (str_in_hashtable(t_dict, transcript_id)) {
@@ -211,9 +215,12 @@ static PyObject* py_aggregateC(PyObject* self, PyObject* args) {
             if (strcmp(is_ref, "True") == 0) {
                 fprintf(output_file_handler, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\texpr \"0.0\"; transcript_id \"%s\"; ref \"1\"; sample_id %s;\n", seqname, source, feature, start, end, score, strand, frame, id_string, sample_id);
             } else {
+
                 // Get GTF_EXPR_ATTR (FPKM, for example) from attributes
                 char* expr_start_index = strstr(attribute, gtf_expr_attr);
-                expr_start_index += strlen(gtf_expr_attr) + 2; // 2 for the space, then quotation mark
+
+                // 2 for the space, then quotation mark
+                expr_start_index += strlen(gtf_expr_attr) + 2;
                 char* end_of_expr_index = strchr(expr_start_index, '"');
                 char expr[64];
                 strncpy(expr, expr_start_index, end_of_expr_index - expr_start_index);
@@ -233,21 +240,18 @@ static PyObject* py_aggregateC(PyObject* self, PyObject* args) {
     free_all_hashtable_nodes(t_dict);
     free(buffer);
 
-    // Return value.
+    // Return value -- returning "NULL" is an error
     return Py_BuildValue("i", 0);
-
 }
 
-// Mapping between python and c function names. 
+// Mapping between python and c function names
 static PyMethodDef aggregateCModule_methods[] = {
     {"aggregateC", py_aggregateC, METH_VARARGS},
     {NULL, NULL}
 };
 
-// Module initialisation routine.
+// Module initialisation routine
 void initaggregateC(void) {
-    // Init module.
+    // Init module
     (void) Py_InitModule("aggregateC", aggregateCModule_methods);
 }
-
-
